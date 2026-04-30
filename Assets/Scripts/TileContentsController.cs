@@ -98,11 +98,13 @@ public class TileContentsController : MonoBehaviour
     
     public IEnumerator Run()
     {
+        yield return StartCoroutine(Wait());
         //Ideally this should only run once, but just in case. . .
         while (Tile != GridManager.Me.Goal)
         {
             //What path do we take to get to the exit?
             Path = FindPath(GridManager.Me.Goal);
+            yield return null;
             //Move to each tile on the path, one by one
             foreach (TileController t in Path)
             {
@@ -121,15 +123,8 @@ public class TileContentsController : MonoBehaviour
                 }
                 //Move to the next tile and wait a sec before next steps
                 SetTile(t);
-                if(Input.GetKey(KeyCode.Space))
-                    yield return new WaitForSeconds(Speed / 5);
-                else if(Input.GetKey(KeyCode.LeftShift))
-                    yield return new WaitForSeconds(Speed / 10);
-                else
-                    yield return new WaitForSeconds(Speed);
+                yield return StartCoroutine(Wait());
             }
-            //Wait a frame, just in case we're in an infinite loop
-            yield return null;
         }
         //If we escaped that while loop, we must be at the goal!
         GridManager.Me.YouWin.gameObject.SetActive(true);
@@ -140,6 +135,16 @@ public class TileContentsController : MonoBehaviour
 
         GridManager.CurrentLevel = (MazeTypes)((int)GridManager.CurrentLevel + 1);
         SceneManager.LoadScene("GridGame");
+    }
+
+    public IEnumerator Wait(float speed = 0)
+    {
+        if (speed == 0) speed = Speed;
+        if (Input.GetKey(KeyCode.Space))
+            speed /= 5;
+        else if(Input.GetKey(KeyCode.LeftShift))
+            speed /= 10;
+        yield return new WaitForSeconds(speed);
     }
 
     public virtual List<TileController> FindPath(TileController goal)
