@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
@@ -8,14 +10,12 @@ public class GridManager : MonoBehaviour
     public static GridManager Me;
     
     //How big is the map we'll build?
-    public Vector2 MapSize;
-    //How many enemies should we spawn?
-    public int Enemies = 2;
+    private Vector2 MapSize = new Vector2(10,7);
     
     //Prefabs for spawning
-    public GridPlayerController PlayerPrefab;
-    public GridEnemyController EnemyPrefab;
+    public TileContentsController PlayerPrefab;
     public TileController TilePrefab;
+    public TextMeshPro YouWin;
 
     //A set of coordinates for the map
     //Don't worry about the details of this too hard, it's very ugly
@@ -24,13 +24,16 @@ public class GridManager : MonoBehaviour
 
     //Track everything we spawn
     public List<TileController> AllTiles;
-    public GridPlayerController Player;
-    public List<GridEnemyController> AllEnemies;
+    public TileContentsController Player;
+    public TileController Goal;
+    public static MazeTypes CurrentLevel = MazeTypes.None;
+    public MazeTypes Maze = MazeTypes.Empty;
 
     void Awake()
     {
         //Register myself to the static variable
         GridManager.Me = this;
+        if (CurrentLevel == MazeTypes.None) CurrentLevel = Maze;
     }
     
     void Start()
@@ -67,42 +70,46 @@ public class GridManager : MonoBehaviour
         emptyTiles.AddRange(AllTiles);
 
         //Choose a random tile
-        TileController chosen = emptyTiles[Random.Range(0, emptyTiles.Count)];
+        TileController chosen = GetTile(1, 3);
         //Spawn the player and then put them in the chosen tile
         Player = Instantiate(PlayerPrefab);
         Player.SetTile(chosen);
         //Remove the filled tile from the list of tiles--it's no longer empty
         emptyTiles.Remove(chosen);
-
-        //Do this code a number of times equal to our Enemies variable
-        for (int n = 0; n < Enemies; n++)
+        Goal = GetTile(8, 3);
+        if (CurrentLevel == MazeTypes.Offset)
         {
-            //If we run out of free tiles, just end the loop
-            if (emptyTiles.Count <= 0) break;
-            //Choose a random tile
-            chosen = emptyTiles[Random.Range(0, emptyTiles.Count)];
-            //Spawn the enemy and then put them in the chosen tile
-            GridEnemyController e = Instantiate(EnemyPrefab);
-            e.SetTile(chosen);
-            //Add the enemy to our tracker list
-            AllEnemies.Add(e);
-            //Remove the filled tile from the list of tiles--it's no longer empty
-            emptyTiles.Remove(chosen);
+            Goal = GetTile(8, 5);
         }
-    }
-
-    //This gets called by the GridPlayerScript whenever they take an action
-    public void TakeTurn()
-    {
-        //For each enemy that exists. . .
-        foreach (GridEnemyController e in AllEnemies)
+        Goal.SetType(TileTypes.Exit);
+        emptyTiles.Remove(Goal);
+        List<TileController> walls = new List<TileController>();
+        switch (CurrentLevel)
         {
-            //A safety check, just in case one ever gets destroyed without being removed
-            //This should never happen, but safety checks like this are a good habit
-            if (e == null) continue;
-            //Tell the enemy to take its turn
-            e.TakeTurn();
+            case MazeTypes.Dot:
+            {
+                walls.Add(GetTile(6,3));
+                break;
+            }
+            case MazeTypes.Wall:
+            {
+                for(int y=1;y<6;y++)
+                    walls.Add(GetTile(6,y));
+                break;
+            }
+            case MazeTypes.Cup:
+            {
+                for(int y=1;y<6;y++)
+                    walls.Add(GetTile(6,y));
+                walls.Add(GetTile(5,1));
+                walls.Add(GetTile(5,5));
+                walls.Add(GetTile(4,1));
+                walls.Add(GetTile(4,5));
+                break;
+            }
         }
+        foreach(TileController t in walls)
+            t.SetType(TileTypes.Wall);
     }
 
     //A shortcut to make it easy to get a specific tile
@@ -116,4 +123,16 @@ public class GridManager : MonoBehaviour
         return Map[x][y];
         //The Map variable is annoying to interact with, so I just wrote a function that will have nicer grammar
     }
+}
+
+public enum MazeTypes
+{
+    None=0,
+    Empty=1,
+    Offset=2,
+    Dot=3,
+    Wall=4,
+    Cup=5,
+    Forest=6,
+    Random=7,
 }
