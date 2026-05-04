@@ -16,6 +16,10 @@ public class TileController : MonoBehaviour
 
     public TileTypes Type = TileTypes.Empty;
 
+    public TileController CameFrom;
+    public int Value;
+    public int Cost;
+
     //This gets called by GridManager when it spawns me
     public void Setup(int x, int y)
     {
